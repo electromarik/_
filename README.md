@@ -1,0 +1,84 @@
+# Messenger
+
+Полноценное веб-приложение для обмена сообщениями в реальном времени: регистрация и вход по JWT, личные диалоги, доставка сообщений через WebSocket, индикатор "печатает" и статус "в сети".
+
+## Стек
+
+- **Backend**: Node.js, TypeScript, Express, Socket.io, PostgreSQL, Prisma ORM, JWT (access + refresh токены), bcrypt
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, React Router, Zustand, Axios, socket.io-client
+
+## Структура проекта
+
+```
+server/   REST API + WebSocket сервер
+client/   React SPA
+```
+
+## Быстрый старт
+
+### 1. База данных
+
+Нужен запущенный PostgreSQL. Создайте пользователя и БД:
+
+```sql
+CREATE USER messenger WITH PASSWORD 'messenger' CREATEDB;
+CREATE DATABASE messenger OWNER messenger;
+```
+
+### 2. Backend
+
+```bash
+cd server
+cp .env.example .env   # заполните JWT_ACCESS_SECRET / JWT_REFRESH_SECRET случайными строками
+npm install
+npm run prisma:migrate # применит миграции и сгенерирует Prisma Client
+npm run dev             # http://localhost:4000
+```
+
+### 3. Frontend
+
+```bash
+cd client
+cp .env.example .env    # при необходимости поменяйте VITE_API_URL
+npm install
+npm run dev              # http://localhost:5173
+```
+
+Откройте `http://localhost:5173`, зарегистрируйте двух пользователей (например, в двух разных браузерных профилях) и начните переписку.
+
+## Основные возможности
+
+- Регистрация / вход с JWT (access-токен в памяти, refresh-токен в httpOnly cookie) и автоматическое обновление access-токена
+- Поиск пользователей и создание личных диалогов
+- Обмен сообщениями в реальном времени через Socket.io, с сохранением истории в PostgreSQL
+- Индикатор набора текста ("печатает...")
+- Статус "в сети / не в сети" с обновлением в реальном времени
+- Пагинация истории сообщений (курсор по `id`)
+
+## Переменные окружения
+
+### server/.env
+
+| Переменная | Назначение |
+|---|---|
+| `DATABASE_URL` | строка подключения к PostgreSQL |
+| `PORT` | порт HTTP/WS сервера (по умолчанию 4000) |
+| `CLIENT_ORIGIN` | origin фронтенда для CORS |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | секреты для подписи токенов |
+| `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | время жизни токенов |
+
+### client/.env
+
+| Переменная | Назначение |
+|---|---|
+| `VITE_API_URL` | базовый URL backend API/WebSocket |
+
+## Production-сборка
+
+```bash
+# backend
+cd server && npm run build && npm start
+
+# frontend
+cd client && npm run build   # статические файлы в client/dist
+```
