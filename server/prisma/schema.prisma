@@ -18,9 +18,10 @@ model User {
   lastSeenAt   DateTime @default(now())
   createdAt    DateTime @default(now())
 
-  participants  ConversationParticipant[]
-  messages      Message[]
-  refreshTokens RefreshToken[]
+  participants         ConversationParticipant[]
+  messages             Message[]
+  refreshTokens        RefreshToken[]
+  conversationsCreated Conversation[]            @relation("ConversationsCreated")
 
   @@index([username])
 }
@@ -37,12 +38,14 @@ model RefreshToken {
 }
 
 model Conversation {
-  id        String   @id @default(uuid())
-  isGroup   Boolean  @default(false)
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  isGroup     Boolean  @default(false)
+  name        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
+  createdBy    User?                     @relation("ConversationsCreated", fields: [createdById], references: [id], onDelete: SetNull)
   participants ConversationParticipant[]
   messages     Message[]
 }
@@ -62,14 +65,31 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   conversationId String
   senderId       String
   content        String
-  createdAt      DateTime @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments  Attachment[]
 
   @@index([conversationId, createdAt])
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  messageId String
+  url       String
+  fileName  String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }

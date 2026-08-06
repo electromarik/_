@@ -6,6 +6,7 @@ import { authRouter } from "./routes/auth.routes.js";
 import { userRouter } from "./routes/user.routes.js";
 import { conversationRouter } from "./routes/conversation.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { UPLOAD_DIR } from "./middleware/upload.js";
 
 export function createApp() {
   const app = express();
@@ -13,6 +14,7 @@ export function createApp() {
   app.use(cors({ origin: env.clientOrigin, credentials: true }));
   app.use(express.json());
   app.use(cookieParser());
+  app.use("/uploads", express.static(UPLOAD_DIR));
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 

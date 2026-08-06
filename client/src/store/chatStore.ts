@@ -1,19 +1,28 @@
 import { create } from "zustand";
-import type { Conversation, Message } from "../types";
+import type { Conversation, Message, ReadReceipt } from "../types";
+
+function sortByUpdatedAtDesc(conversations: Conversation[]): Conversation[] {
+  return [...conversations].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+}
 
 interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
   messagesByConversation: Record<string, Message[]>;
   typingByConversation: Record<string, Set<string>>;
+  readReceipts: Record<string, Record<string, string>>;
   setConversations: (conversations: Conversation[]) => void;
   upsertConversation: (conversation: Conversation) => void;
   setActiveConversation: (id: string | null) => void;
   setMessages: (conversationId: string, messages: Message[]) => void;
   prependMessages: (conversationId: string, messages: Message[]) => void;
   addMessage: (message: Message) => void;
+  updateMessage: (message: Message) => void;
   setTyping: (conversationId: string, userId: string, isTyping: boolean) => void;
   updatePresence: (userId: string, isOnline: boolean) => void;
+  setReadReceipt: (receipt: ReadReceipt) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -21,13 +30,14 @@ export const useChatStore = create<ChatState>((set) => ({
   activeConversationId: null,
   messagesByConversation: {},
   typingByConversation: {},
+  readReceipts: {},
 
-  setConversations: (conversations) => set({ conversations }),
+  setConversations: (conversations) => set({ conversations: sortByUpdatedAtDesc(conversations) }),
 
   upsertConversation: (conversation) =>
     set((state) => {
       const rest = state.conversations.filter((c) => c.id !== conversation.id);
-      return { conversations: [conversation, ...rest] };
+      return { conversations: sortByUpdatedAtDesc([conversation, ...rest]) };
     }),
 
   setActiveConversation: (id) => set({ activeConversationId: id }),
@@ -55,17 +65,30 @@ export const useChatStore = create<ChatState>((set) => ({
           ? { ...c, lastMessage: message, updatedAt: message.createdAt }
           : c,
       );
-      const touched = conversations.find((c) => c.id === message.conversationId);
-      const reordered = touched
-        ? [touched, ...conversations.filter((c) => c.id !== message.conversationId)]
-        : conversations;
 
       return {
         messagesByConversation: {
           ...state.messagesByConversation,
           [message.conversationId]: [...existing, message],
         },
-        conversations: reordered,
+        conversations: sortByUpdatedAtDesc(conversations),
+      };
+    }),
+
+  updateMessage: (message) =>
+    set((state) => {
+      const existing = state.messagesByConversation[message.conversationId] ?? [];
+      const updated = existing.map((m) => (m.id === message.id ? message : m));
+
+      const conversations = state.conversations.map((c) => {
+        if (c.id !== message.conversationId) return c;
+        if (c.lastMessage?.id !== message.id) return c;
+        return { ...c, lastMessage: message };
+      });
+
+      return {
+        messagesByConversation: { ...state.messagesByConversation, [message.conversationId]: updated },
+        conversations,
       };
     }),
 
@@ -86,8 +109,24 @@ export const useChatStore = create<ChatState>((set) => ({
         participants: c.participants.map((p) => (p.id === userId ? { ...p, isOnline } : p)),
       })),
     })),
+
+  setReadReceipt: (receipt) =>
+    set((state) => ({
+      readReceipts: {
+        ...state.readReceipts,
+        [receipt.conversationId]: {
+          ...state.readReceipts[receipt.conversationId],
+          [receipt.userId]: receipt.lastReadAt,
+        },
+      },
+    })),
 }));
 
 export function getOtherParticipant(conversation: Conversation, currentUserId: string) {
   return conversation.participants.find((p) => p.id !== currentUserId) ?? conversation.participants[0];
+}
+
+export function getConversationTitle(conversation: Conversation, currentUserId: string): string {
+  if (conversation.isGroup) return conversation.name ?? "Группа";
+  return getOtherParticipant(conversation, currentUserId).displayName;
 }

@@ -1,12 +1,23 @@
 import { Avatar } from "./Avatar";
 import type { Conversation } from "../types";
-import { getOtherParticipant } from "../store/chatStore";
+import { getConversationTitle, getOtherParticipant } from "../store/chatStore";
 
 interface Props {
   conversations: Conversation[];
   activeId: string | null;
   currentUserId: string;
   onSelect: (id: string) => void;
+}
+
+const GROUP_COLOR = "#64748b";
+
+function previewText(conversation: Conversation): string {
+  const last = conversation.lastMessage;
+  if (!last) return "Нет сообщений";
+  if (last.deletedAt) return "Сообщение удалено";
+  if (last.content) return last.content;
+  if (last.attachments.length > 0) return `📎 ${last.attachments.length > 1 ? "Вложения" : "Вложение"}`;
+  return "Нет сообщений";
 }
 
 export function ConversationList({ conversations, activeId, currentUserId, onSelect }: Props) {
@@ -21,8 +32,10 @@ export function ConversationList({ conversations, activeId, currentUserId, onSel
   return (
     <ul className="flex-1 overflow-y-auto">
       {conversations.map((conversation) => {
-        const peer = getOtherParticipant(conversation, currentUserId);
         const isActive = conversation.id === activeId;
+        const title = getConversationTitle(conversation, currentUserId);
+        const peer = conversation.isGroup ? null : getOtherParticipant(conversation, currentUserId);
+
         return (
           <li key={conversation.id}>
             <button
@@ -31,15 +44,17 @@ export function ConversationList({ conversations, activeId, currentUserId, onSel
                 isActive ? "bg-indigo-50 dark:bg-slate-800" : ""
               }`}
             >
-              <Avatar name={peer.displayName} color={peer.avatarColor} online={peer.isOnline} />
+              <Avatar
+                name={title}
+                color={peer ? peer.avatarColor : GROUP_COLOR}
+                online={peer ? peer.isOnline : undefined}
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="truncate font-medium text-slate-900 dark:text-white">
-                    {peer.displayName}
-                  </span>
+                  <span className="truncate font-medium text-slate-900 dark:text-white">{title}</span>
                 </div>
                 <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-                  {conversation.lastMessage?.content ?? "Нет сообщений"}
+                  {previewText(conversation)}
                 </p>
               </div>
             </button>
