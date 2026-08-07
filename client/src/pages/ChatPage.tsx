@@ -13,6 +13,7 @@ import {
   removeParticipant,
   sendMessage,
   startConversation,
+  toggleReaction,
 } from "../api/chat";
 import { logout as logoutApi } from "../api/auth";
 import { ConversationList } from "../components/ConversationList";
@@ -164,6 +165,12 @@ export function ChatPage() {
     updateMessage(message);
   }
 
+  async function handleReact(messageId: string, emoji: string) {
+    if (!activeConversationId) return;
+    const message = await toggleReaction(activeConversationId, messageId, emoji);
+    updateMessage(message);
+  }
+
   function handleTypingStart() {
     if (!activeConversationId) return;
     getSocket()?.emit("typing:start", { conversationId: activeConversationId });
@@ -287,12 +294,14 @@ export function ChatPage() {
                   key={message.id}
                   message={message}
                   isOwn={message.senderId === user.id}
+                  currentUserId={user.id}
                   showSenderName={activeConversation.isGroup}
                   readLabel={
                     lastOwnMessage?.id === message.id && isLastOwnMessageRead ? "прочитано" : null
                   }
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
+                  onReact={handleReact}
                 />
               ))}
               {typingNames.length > 0 && (

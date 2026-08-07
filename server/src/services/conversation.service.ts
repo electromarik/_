@@ -21,15 +21,26 @@ const MESSAGE_SENDER_SELECT = {
 const MESSAGE_INCLUDE = {
   sender: { select: MESSAGE_SENDER_SELECT },
   attachments: true,
+  reactions: { select: { emoji: true, userId: true } },
 } satisfies Prisma.MessageInclude;
 
 type MessageWithRelations = Prisma.MessageGetPayload<{ include: typeof MESSAGE_INCLUDE }>;
 
+function groupReactions(reactions: { emoji: string; userId: string }[]) {
+  const byEmoji = new Map<string, string[]>();
+  for (const r of reactions) {
+    const list = byEmoji.get(r.emoji) ?? [];
+    list.push(r.userId);
+    byEmoji.set(r.emoji, list);
+  }
+  return Array.from(byEmoji.entries()).map(([emoji, userIds]) => ({ emoji, userIds }));
+}
+
 function formatMessage(m: MessageWithRelations) {
   if (m.deletedAt) {
-    return { ...m, content: "", attachments: [] };
+    return { ...m, content: "", attachments: [], reactions: [] };
   }
-  return m;
+  return { ...m, reactions: groupReactions(m.reactions) };
 }
 
 const CONVERSATION_SUMMARY_INCLUDE = {
@@ -278,6 +289,29 @@ export async function deleteMessage(messageId: string, userId: string) {
   });
 
   return formatMessage(message);
+}
+
+export async function toggleReaction(messageId: string, userId: string, emoji: string) {
+  const message = await prisma.message.findUniqueOrThrow({ where: { id: messageId } });
+  if (message.deletedAt) {
+    throw new HttpError(400, "Cannot react to a deleted message");
+  }
+  await assertParticipant(message.conversationId, userId);
+
+  const existing = await prisma.reaction.findUnique({
+    where: { messageId_userId_emoji: { messageId, userId, emoji } },
+  });
+  if (existing) {
+    await prisma.reaction.delete({ where: { id: existing.id } });
+  } else {
+    await prisma.reaction.create({ data: { messageId, userId, emoji } });
+  }
+
+  const updated = await prisma.message.findUniqueOrThrow({
+    where: { id: messageId },
+    include: MESSAGE_INCLUDE,
+  });
+  return formatMessage(updated);
 }
 
 export async function markRead(conversationId: string, userId: string) {

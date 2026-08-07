@@ -75,6 +75,14 @@ export async function deleteMessage(conversationId: string, messageId: string) {
   return data.message;
 }
 
+export async function toggleReaction(conversationId: string, messageId: string, emoji: string) {
+  const { data } = await api.post<{ message: Message }>(
+    `/conversations/${conversationId}/messages/${messageId}/reactions`,
+    { emoji },
+  );
+  return data.message;
+}
+
 export async function markRead(conversationId: string) {
   await api.post(`/conversations/${conversationId}/read`);
 }

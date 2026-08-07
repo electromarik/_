@@ -6,6 +6,7 @@ import {
   addParticipantSchema,
   createGroupSchema,
   editMessageSchema,
+  reactionSchema,
   sendMessageSchema,
   startConversationSchema,
 } from "../validation/conversation.schema.js";
@@ -161,6 +162,24 @@ conversationRouter.delete(
   "/:id/messages/:messageId",
   asyncHandler(async (req: AuthedRequest, res) => {
     const message = await conversationService.deleteMessage(req.params.messageId, req.user!.userId);
+    const participantIds = await conversationService.getParticipantIds(req.params.id);
+    const io = getIo();
+    for (const participantId of participantIds) {
+      io.to(`user:${participantId}`).emit("message:updated", message);
+    }
+    res.json({ message });
+  }),
+);
+
+conversationRouter.post(
+  "/:id/messages/:messageId/reactions",
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { emoji } = reactionSchema.parse(req.body);
+    const message = await conversationService.toggleReaction(
+      req.params.messageId,
+      req.user!.userId,
+      emoji,
+    );
     const participantIds = await conversationService.getParticipantIds(req.params.id);
     const io = getIo();
     for (const participantId of participantIds) {

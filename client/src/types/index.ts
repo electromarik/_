@@ -17,6 +17,11 @@ export interface Attachment {
   createdAt: string;
 }
 
+export interface ReactionGroup {
+  emoji: string;
+  userIds: string[];
+}
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -26,6 +31,7 @@ export interface Message {
   deletedAt: string | null;
   createdAt: string;
   attachments: Attachment[];
+  reactions: ReactionGroup[];
   sender: {
     id: string;
     username: string;
