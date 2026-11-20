@@ -2,6 +2,16 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
+<script>
+(function () {
+  try {
+    var saved = localStorage.getItem("musicx-theme");
+    if (saved === "light" || saved === "dark") {
+      document.documentElement.setAttribute("data-theme", saved);
+    }
+  } catch (e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MusicX Pro — скачать для macOS</title>
 <meta name="description" content="MusicX Pro — лёгкое нативное приложение для прослушивания музыки на Mac. Скачайте бесплатно." />
@@ -14,6 +24,10 @@
 <meta property="og:type" content="website" />
 <meta name="theme-color" content="#0d0e14" />
 
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
 <style>
   :root {
     --bg: #0d0e14;
@@ -25,29 +39,63 @@
     --accent-2: #ffd166;
     --border: #262a38;
     --radius: 18px;
+    --shadow-soft: rgba(0,0,0,0.6);
+    --blob-op: 0.22;
+    color-scheme: dark;
   }
+  :root[data-theme="light"] {
+    --bg: #f6f6fb;
+    --panel: #ffffff;
+    --panel-2: #f1f1f7;
+    --text: #15171f;
+    --text-dim: #5c6072;
+    --border: #e6e7f0;
+    --shadow-soft: rgba(30,30,60,0.12);
+    --blob-op: 0.16;
+    color-scheme: light;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background:
-      radial-gradient(60% 50% at 20% 0%, rgba(255,77,109,0.18), transparent 60%),
-      radial-gradient(50% 50% at 100% 20%, rgba(255,209,102,0.10), transparent 60%),
-      var(--bg);
+    font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
     color: var(--text);
     line-height: 1.55;
+    overflow-x: hidden;
+    transition: background-color .3s ease, color .3s ease;
   }
   a { color: inherit; text-decoration: none; }
   ::selection { background: var(--accent); color: #fff; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
 
-  header.nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); background: rgba(13,14,20,0.8); }
+  .blob { position: fixed; border-radius: 50%; filter: blur(110px); opacity: var(--blob-op); z-index: 0; pointer-events: none; }
+  .blob-1 { width: 480px; height: 480px; top: -160px; left: -120px; background: var(--accent); animation: drift1 22s ease-in-out infinite; }
+  .blob-2 { width: 420px; height: 420px; top: 10%; right: -140px; background: var(--accent-2); opacity: calc(var(--blob-op) * 0.6); animation: drift2 26s ease-in-out infinite; }
+  .blob-3 { width: 360px; height: 360px; bottom: -140px; left: 20%; background: var(--accent); opacity: calc(var(--blob-op) * 0.7); animation: drift3 30s ease-in-out infinite; }
+  @keyframes drift1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(60px, 40px); } }
+  @keyframes drift2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-50px, 60px); } }
+  @keyframes drift3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, -30px) scale(1.08); } }
+
+  header.nav {
+    position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+    background: rgba(13,14,20,0.82);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+  }
   .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
   .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; }
   .logo img { width: 28px; height: 28px; border-radius: 8px; }
   nav.links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
   nav.links a { transition: color .15s ease; }
   nav.links a:hover { color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+
+  .theme-toggle {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .theme-toggle:hover { border-color: #8a90a380; transform: translateY(-1px); }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -55,24 +103,40 @@
     border: 1px solid transparent; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease;
   }
   .btn:hover { transform: translateY(-2px); }
-  .btn:focus-visible, nav.links a:focus-visible, .faq-q:focus-visible {
+  .btn:focus-visible, nav.links a:focus-visible, .faq-q:focus-visible, .theme-toggle:focus-visible {
     outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 10px;
   }
   .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1a1a1a; box-shadow: 0 14px 30px -10px rgba(255,77,109,0.5); }
   .btn-primary:hover { box-shadow: 0 18px 34px -10px rgba(255,77,109,0.65); }
   .btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
-  .btn-ghost:hover { border-color: #3c4258; }
+  .btn-ghost:hover { border-color: #8a90a380; }
   .btn-sm { padding: 9px 16px; font-size: 13px; }
 
   .hero { padding: 86px 0 60px; text-align: center; }
+  .stagger { opacity: 0; animation: riseIn .7s ease forwards; }
+  .s1 { animation-delay: .05s; } .s2 { animation-delay: .15s; } .s3 { animation-delay: .25s; }
+  .s4 { animation-delay: .35s; } .s5 { animation-delay: .45s; } .s6 { animation-delay: .55s; }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
   .icon-tile {
-    width: 112px; height: 112px; margin: 0 auto; border-radius: 26px; background: #fff; padding: 14px;
-    display: flex; align-items: center; justify-content: center; overflow: hidden;
-    box-shadow: 0 20px 50px -20px rgba(0,0,0,0.6);
-    animation: float 5s ease-in-out infinite;
+    position: relative; width: 112px; height: 112px; margin: 0 auto; border-radius: 26px; background: #fff; padding: 14px;
+    display: flex; align-items: center; justify-content: center; overflow: visible;
+    box-shadow: 0 20px 50px -20px var(--shadow-soft);
+    animation: riseIn .7s ease forwards, float 5s ease-in-out .7s infinite;
   }
-  .icon-tile img { width: 100%; height: 100%; object-fit: contain; }
+  .icon-tile img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; overflow: hidden; }
   @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  .eq-badge {
+    position: absolute; right: -8px; bottom: -8px; width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center;
+    gap: 2.5px; box-shadow: 0 8px 18px -6px rgba(255,77,109,0.6); border: 3px solid var(--bg);
+  }
+  .eq-badge span { width: 3px; background: #1a1a1a; border-radius: 2px; animation: eqbar 1s ease-in-out infinite; }
+  .eq-badge span:nth-child(1) { height: 6px; animation-delay: -0.6s; }
+  .eq-badge span:nth-child(2) { height: 12px; animation-delay: -0.2s; }
+  .eq-badge span:nth-child(3) { height: 8px; animation-delay: -0.9s; }
+  @keyframes eqbar { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1.4); } }
 
   .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); font-size: 13px; background: var(--panel); margin-top: 22px; }
   .eyebrow .dot2 { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 4px rgba(255,209,102,0.15); }
@@ -93,7 +157,7 @@
 
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: border-color .2s ease, transform .2s ease; }
-  .card:hover { border-color: #3c4258; transform: translateY(-3px); }
+  .card:hover { border-color: #8a90a380; transform: translateY(-3px); }
   .card .icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: rgba(255,77,109,0.14); margin-bottom: 14px; }
   .card h3 { font-size: 15px; margin-bottom: 6px; }
   .card p { color: var(--text-dim); font-size: 13px; }
@@ -143,13 +207,18 @@
 
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .icon-tile { animation: none; }
+    .icon-tile, .blob, .eq-badge span { animation: none; }
     .reveal { opacity: 1; transform: none; transition: none; }
-    .btn, .card, .faq-q .chev { transition: none; }
+    .stagger { opacity: 1; animation: none; }
+    .btn, .card, .faq-q .chev, .theme-toggle { transition: none; }
   }
 </style>
 </head>
 <body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
 
 <header class="nav">
   <div class="wrap nav-inner">
@@ -160,22 +229,28 @@
       <a href="#how">Установка</a>
       <a href="#faq">Вопросы</a>
     </nav>
-    <a class="btn btn-primary btn-sm" href="downloads/MusicX-Pro.app.zip" download>Скачать</a>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Переключить тему">🌙</button>
+      <a class="btn btn-primary btn-sm" href="downloads/MusicX-Pro.app.zip" download>Скачать</a>
+    </div>
   </div>
 </header>
 
 <main>
   <section class="hero">
     <div class="wrap">
-      <div class="icon-tile"><img src="assets/app-icon.png" alt="Иконка MusicX Pro" /></div>
-      <span class="eyebrow"><span class="dot2"></span> Нативное приложение для macOS</span>
-      <h1>MusicX Pro —<br><span>ваш музыкальный плеер</span></h1>
-      <p class="lead">Лёгкое и быстрое приложение для прослушивания музыки на Mac. Скачайте, разархивируйте и запустите — без регистрации и рекламы.</p>
-      <div class="cta-row">
+      <div class="icon-tile">
+        <img src="assets/app-icon.png" alt="Иконка MusicX Pro" />
+        <div class="eq-badge" aria-hidden="true"><span></span><span></span><span></span></div>
+      </div>
+      <span class="eyebrow stagger s2"><span class="dot2"></span> Нативное приложение для macOS</span>
+      <h1 class="stagger s3">MusicX Pro —<br><span>ваш музыкальный плеер</span></h1>
+      <p class="lead stagger s4">Лёгкое и быстрое приложение для прослушивания музыки на Mac. Скачайте, разархивируйте и запустите — без регистрации и рекламы.</p>
+      <div class="cta-row stagger s5">
         <a class="btn btn-primary" href="downloads/MusicX-Pro.app.zip" download>⬇ Скачать для macOS</a>
         <a class="btn btn-ghost" href="#how">Как установить</a>
       </div>
-      <div class="hint">MusicX Pro.app.zip · ~300 КБ · версия 1.0 · macOS</div>
+      <div class="hint stagger s6">MusicX Pro.app.zip · ~300 КБ · версия 1.0 · macOS</div>
     </div>
   </section>
 
@@ -294,6 +369,22 @@
   } else {
     revealEls.forEach(function (el) { el.classList.add("in"); });
   }
+
+  var toggle = document.getElementById("themeToggle");
+  var root = document.documentElement;
+  function currentTheme() {
+    return root.getAttribute("data-theme") === "light" ? "light" : "dark";
+  }
+  function paintToggle() {
+    toggle.textContent = currentTheme() === "light" ? "☀️" : "🌙";
+  }
+  paintToggle();
+  toggle.addEventListener("click", function () {
+    var next = currentTheme() === "light" ? "dark" : "light";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("musicx-theme", next); } catch (e) {}
+    paintToggle();
+  });
 })();
 </script>
 
