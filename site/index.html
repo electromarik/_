@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Messenger — мессенджер в реальном времени</title>
+<meta name="description" content="Полноценный веб-мессенджер: личные и групповые чаты, вложения, реакции, статусы прочтения и индикатор набора текста." />
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-soft: #161925;
+    --card: #1b1f2b;
+    --text: #eef0f4;
+    --text-dim: #9aa3b5;
+    --accent: #6c5ce7;
+    --accent-2: #00d2a4;
+    --border: #2a2f3d;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  header.nav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15,17,21,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .logo-dot {
+    width: 28px; height: 28px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+  nav.links { display: flex; gap: 28px; font-size: 14px; color: var(--text-dim); }
+  nav.links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    border: 1px solid transparent; cursor: pointer; transition: transform .15s ease, opacity .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #8b7bf0); color: #fff; }
+  .btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
+
+  main { overflow-x: hidden; }
+
+  .hero { padding: 96px 0 72px; text-align: center; position: relative; }
+  .hero::before {
+    content: ""; position: absolute; inset: -200px 0 auto 0; height: 520px;
+    background: radial-gradient(60% 60% at 50% 0%, rgba(108,92,231,0.25), transparent 70%);
+    pointer-events: none; z-index: -1;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 13px; background: var(--bg-soft);
+  }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); }
+  h1 {
+    font-size: clamp(32px, 6vw, 56px); font-weight: 800; letter-spacing: -0.02em;
+    margin: 24px 0 18px;
+  }
+  h1 span { background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { max-width: 640px; margin: 0 auto; color: var(--text-dim); font-size: 18px; }
+  .cta-row { display: flex; gap: 14px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
+
+  .mock {
+    margin: 64px auto 0; max-width: 860px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--card); padding: 8px; box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6);
+  }
+  .mock-bar { display: flex; gap: 6px; padding: 10px 14px; }
+  .mock-bar span { width: 10px; height: 10px; border-radius: 50%; background: #3a3f4e; }
+  .mock-body { display: grid; grid-template-columns: 220px 1fr; gap: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); min-height: 320px; background: var(--bg-soft); }
+  .mock-side { border-right: 1px solid var(--border); padding: 14px; }
+  .mock-chat-item { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; margin-bottom: 6px; }
+  .mock-chat-item.active { background: rgba(108,92,231,0.15); }
+  .mock-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); flex-shrink: 0; }
+  .mock-line { height: 8px; border-radius: 6px; background: #2a2f3d; }
+  .mock-line.w60 { width: 60%; } .mock-line.w40 { width: 40%; margin-top: 6px; }
+  .mock-main { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 13px; color: var(--text-dim); }
+  .bubble.in { background: #22273a; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .bubble.out { background: linear-gradient(135deg, var(--accent), #8b7bf0); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .typing { align-self: flex-start; font-size: 12px; color: var(--text-dim); display: flex; gap: 4px; align-items: center; }
+  .typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-dim); display: inline-block; animation: blink 1.2s infinite ease-in-out; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  section { padding: 88px 0; }
+  .section-head { text-align: center; max-width: 620px; margin: 0 auto 48px; }
+  .section-head .kicker { color: var(--accent-2); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .section-head h2 { font-size: clamp(26px, 4vw, 38px); margin-top: 10px; letter-spacing: -0.01em; }
+  .section-head p { color: var(--text-dim); margin-top: 12px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 26px; transition: border-color .2s ease, transform .2s ease;
+  }
+  .card:hover { border-color: #3c4258; transform: translateY(-3px); }
+  .card .icon {
+    width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; background: rgba(108,92,231,0.15); margin-bottom: 16px;
+  }
+  .card h3 { font-size: 16px; margin-bottom: 8px; }
+  .card p { color: var(--text-dim); font-size: 14px; }
+
+  .stack-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .pill {
+    padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-soft);
+    font-size: 14px; color: var(--text-dim); display: flex; align-items: center; gap: 8px;
+  }
+  .pill b { color: var(--text); font-weight: 600; }
+
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .list-check { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .list-check li { display: flex; gap: 12px; color: var(--text-dim); font-size: 15px; }
+  .list-check li b { color: var(--text); }
+  .check {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,210,164,0.15);
+    color: var(--accent-2); display: flex; align-items: center; justify-content: center; font-size: 13px; margin-top: 1px;
+  }
+
+  .cta-section {
+    text-align: center; border-radius: 24px; border: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(108,92,231,0.18), rgba(0,210,164,0.1));
+    padding: 64px 32px;
+  }
+  .cta-section h2 { font-size: clamp(24px, 4vw, 34px); margin-bottom: 14px; }
+  .cta-section p { color: var(--text-dim); max-width: 480px; margin: 0 auto 28px; }
+
+  footer { border-top: 1px solid var(--border); padding: 32px 0; color: var(--text-dim); font-size: 13px; }
+  .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 860px) {
+    nav.links { display: none; }
+    .grid { grid-template-columns: 1fr; }
+    .cols-2 { grid-template-columns: 1fr; }
+    .mock-body { grid-template-columns: 1fr; }
+    .mock-side { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="logo-dot">💬</span> Messenger</div>
+    <nav class="links">
+      <a href="#features">Возможности</a>
+      <a href="#stack">Технологии</a>
+      <a href="#start">Запуск</a>
+    </nav>
+    <a class="btn btn-primary" href="https://github.com" target="_blank" rel="noopener">Открыть на GitHub</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow"><span class="dot"></span> Чаты в реальном времени на Socket.io</span>
+      <h1>Мессенджер, который<br><span>доставляет сообщения мгновенно</span></h1>
+      <p class="lead">Личные и групповые чаты, вложения, реакции, статусы прочтения и индикатор набора текста — всё поверх WebSocket, с историей в PostgreSQL.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#start">Как запустить</a>
+        <a class="btn btn-ghost" href="#features">Все возможности</a>
+      </div>
+
+      <div class="mock">
+        <div class="mock-bar"><span></span><span></span><span></span></div>
+        <div class="mock-body">
+          <div class="mock-side">
+            <div class="mock-chat-item active">
+              <div class="mock-avatar"></div>
+              <div style="flex:1"><div class="mock-line w60"></div><div class="mock-line w40"></div></div>
+            </div>
+            <div class="mock-chat-item">
+              <div class="mock-avatar" style="background:#2a2f3d"></div>
+              <div style="flex:1"><div class="mock-line w60" style="background:#232838"></div><div class="mock-line w40" style="background:#232838"></div></div>
+            </div>
+            <div class="mock-chat-item">
+              <div class="mock-avatar" style="background:#2a2f3d"></div>
+              <div style="flex:1"><div class="mock-line w60" style="background:#232838"></div><div class="mock-line w40" style="background:#232838"></div></div>
+            </div>
+          </div>
+          <div class="mock-main">
+            <div class="bubble in">Привет! Видел обновление с реакциями? 👀</div>
+            <div class="bubble out">Да, уже тестирую 😄 ещё групповые чаты добавили</div>
+            <div class="bubble in">Статусы прочтения тоже работают, кстати</div>
+            <div class="typing">печатает<i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Возможности</span>
+        <h2>Всё, что нужно для общения</h2>
+        <p>От приватных диалогов до групповых чатов с вложениями и реакциями.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="icon">🔐</div><h3>JWT-аутентификация</h3><p>Access-токен в памяти, refresh — в httpOnly cookie, с автоматическим обновлением.</p></div>
+        <div class="card"><div class="icon">⚡</div><h3>Реальное время</h3><p>Доставка сообщений через Socket.io без перезагрузки страницы.</p></div>
+        <div class="card"><div class="icon">👥</div><h3>Группы</h3><p>Создание групповых чатов, управление участниками, выход из группы.</p></div>
+        <div class="card"><div class="icon">📎</div><h3>Вложения</h3><p>До 5 файлов и 15 МБ каждый, с превью изображений прямо в чате.</p></div>
+        <div class="card"><div class="icon">😊</div><h3>Реакции</h3><p>Эмодзи-реакции на сообщения с подсчётом и переключением по клику.</p></div>
+        <div class="card"><div class="icon">✓✓</div><h3>Статусы и индикаторы</h3><p>Прочитано / не прочитано, «печатает…», онлайн-статус в реальном времени.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Технологии</span>
+        <h2>Современный full-stack</h2>
+      </div>
+      <div class="stack-row">
+        <span class="pill"><b>Backend:</b> Node.js · TypeScript · Express</span>
+        <span class="pill"><b>Real-time:</b> Socket.io</span>
+        <span class="pill"><b>БД:</b> PostgreSQL · Prisma ORM</span>
+        <span class="pill"><b>Frontend:</b> React · Vite · Tailwind CSS</span>
+        <span class="pill"><b>Состояние:</b> Zustand · Axios</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap cols-2">
+      <div>
+        <span class="kicker">Быстрый старт</span>
+        <h2 style="margin-top:10px; font-size:clamp(24px,4vw,32px);">Запуск за 5 минут</h2>
+        <ul class="list-check" style="margin-top:22px;">
+          <li><span class="check">1</span><span><b>База данных:</b> поднимите PostgreSQL и создайте пользователя/БД.</span></li>
+          <li><span class="check">2</span><span><b>Backend:</b> <code>cd server && npm install && npm run prisma:migrate && npm run dev</code></span></li>
+          <li><span class="check">3</span><span><b>Frontend:</b> <code>cd client && npm install && npm run dev</code></span></li>
+          <li><span class="check">4</span><span>Откройте <b>localhost:5173</b>, зарегистрируйте пользователей и начните чат.</span></li>
+        </ul>
+      </div>
+      <div class="mock" style="margin:0;">
+        <div class="mock-bar"><span></span><span></span><span></span></div>
+        <div style="padding:20px; font-family: monospace; font-size:13px; color:var(--text-dim); line-height:1.8;">
+          <div style="color:var(--accent-2);">$ cd server</div>
+          <div>$ npm install</div>
+          <div>$ npm run prisma:migrate</div>
+          <div style="color:var(--accent-2);">$ npm run dev</div>
+          <div style="color:#6c7a89;">→ http://localhost:4000</div>
+          <br>
+          <div style="color:var(--accent-2);">$ cd client</div>
+          <div>$ npm install</div>
+          <div style="color:var(--accent-2);">$ npm run dev</div>
+          <div style="color:#6c7a89;">→ http://localhost:5173</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="cta-section">
+        <h2>Готовы попробовать?</h2>
+        <p>Клонируйте репозиторий, поднимите backend и frontend — и начните общение за пару минут.</p>
+        <a class="btn btn-primary" href="https://github.com" target="_blank" rel="noopener">Посмотреть исходный код</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>© 2026 Messenger. Учебный проект.</span>
+    <span>Node.js · React · Socket.io · PostgreSQL</span>
+  </div>
+</footer>
+
+</body>
+</html>
