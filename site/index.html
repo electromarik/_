@@ -3,290 +3,467 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Messenger — мессенджер в реальном времени</title>
-<meta name="description" content="Полноценный веб-мессенджер: личные и групповые чаты, вложения, реакции, статусы прочтения и индикатор набора текста." />
+<title>Музыкальный плеер</title>
+<meta name="description" content="Веб-плеер: плейлист, play/pause, перемотка, громкость, загрузка своих треков." />
 <style>
   :root {
-    --bg: #0f1115;
-    --bg-soft: #161925;
-    --card: #1b1f2b;
+    --bg: #0d0e14;
+    --panel: #15171f;
+    --panel-2: #1b1e29;
     --text: #eef0f4;
-    --text-dim: #9aa3b5;
-    --accent: #6c5ce7;
-    --accent-2: #00d2a4;
-    --border: #2a2f3d;
-    --radius: 16px;
+    --text-dim: #8a90a3;
+    --accent: #ff4d6d;
+    --accent-2: #ffd166;
+    --border: #262a38;
+    --radius: 18px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
   body {
+    min-height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
+    background:
+      radial-gradient(60% 50% at 20% 0%, rgba(255,77,109,0.18), transparent 60%),
+      radial-gradient(50% 50% at 100% 20%, rgba(255,209,102,0.10), transparent 60%),
+      var(--bg);
     color: var(--text);
-    line-height: 1.55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
   }
-  a { color: inherit; text-decoration: none; }
-  img { max-width: 100%; display: block; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .app {
+    width: 100%;
+    max-width: 920px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: 0 40px 100px -40px rgba(0,0,0,0.7);
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    overflow: hidden;
+  }
+  .side {
+    background: var(--panel-2);
+    border-right: 1px solid var(--border);
+    padding: 22px 18px;
+    display: flex;
+    flex-direction: column;
+    min-height: 560px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; margin-bottom: 18px; }
+  .brand .dot { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display:flex; align-items:center; justify-content:center; font-size: 13px; }
+  .add-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .add-btn {
+    flex: 1; border: 1px dashed var(--border); background: transparent; color: var(--text-dim);
+    border-radius: 12px; padding: 10px; font-size: 13px; cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--text); }
 
-  header.nav {
-    position: sticky; top: 0; z-index: 10;
-    background: rgba(15,17,21,0.85);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
+  .playlist { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .track {
+    display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; cursor: pointer;
+    border: 1px solid transparent; transition: background .15s;
   }
-  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
-  .logo-dot {
-    width: 28px; height: 28px; border-radius: 9px;
+  .track:hover { background: rgba(255,255,255,0.04); }
+  .track.active { background: rgba(255,77,109,0.14); border-color: rgba(255,77,109,0.35); }
+  .track-art {
+    width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
   }
-  nav.links { display: flex; gap: 28px; font-size: 14px; color: var(--text-dim); }
-  nav.links a:hover { color: var(--text); }
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
-    border: 1px solid transparent; cursor: pointer; transition: transform .15s ease, opacity .15s ease;
-  }
-  .btn:hover { transform: translateY(-1px); }
-  .btn-primary { background: linear-gradient(135deg, var(--accent), #8b7bf0); color: #fff; }
-  .btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
+  .track-meta { flex: 1; min-width: 0; }
+  .track-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-artist { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-dur { font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+  .track-eq { display: flex; gap: 2px; align-items: flex-end; height: 14px; width: 14px; flex-shrink: 0; }
+  .track-eq span { width: 3px; background: var(--accent); border-radius: 2px; animation: eq 0.9s infinite ease-in-out; }
+  .track-eq span:nth-child(2) { animation-delay: .2s; } .track-eq span:nth-child(3) { animation-delay: .4s; }
+  @keyframes eq { 0%,100% { height: 3px; } 50% { height: 14px; } }
 
-  main { overflow-x: hidden; }
+  .main { padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+  .art-wrap {
+    width: 240px; height: 240px; border-radius: 22px; margin-top: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center; font-size: 72px;
+    box-shadow: 0 30px 60px -25px rgba(255,77,109,0.5);
+  }
+  .now-title { margin-top: 26px; font-size: 22px; font-weight: 800; text-align: center; }
+  .now-artist { margin-top: 6px; color: var(--text-dim); font-size: 14px; }
 
-  .hero { padding: 96px 0 72px; text-align: center; position: relative; }
-  .hero::before {
-    content: ""; position: absolute; inset: -200px 0 auto 0; height: 520px;
-    background: radial-gradient(60% 60% at 50% 0%, rgba(108,92,231,0.25), transparent 70%);
-    pointer-events: none; z-index: -1;
+  .progress-wrap { width: 100%; max-width: 420px; margin-top: 28px; }
+  .bar {
+    position: relative; height: 6px; border-radius: 999px; background: var(--border); cursor: pointer; overflow: hidden;
   }
-  .eyebrow {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border);
-    color: var(--text-dim); font-size: 13px; background: var(--bg-soft);
-  }
-  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); }
-  h1 {
-    font-size: clamp(32px, 6vw, 56px); font-weight: 800; letter-spacing: -0.02em;
-    margin: 24px 0 18px;
-  }
-  h1 span { background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .lead { max-width: 640px; margin: 0 auto; color: var(--text-dim); font-size: 18px; }
-  .cta-row { display: flex; gap: 14px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
+  .bar-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+  .time-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 8px; }
 
-  .mock {
-    margin: 64px auto 0; max-width: 860px; border-radius: 20px; border: 1px solid var(--border);
-    background: var(--card); padding: 8px; box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6);
+  .controls { display: flex; align-items: center; gap: 18px; margin-top: 26px; }
+  .ctrl-btn {
+    background: transparent; border: none; color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; width: 42px; height: 42px;
+    border-radius: 50%; font-size: 18px; transition: background .15s, color .15s;
   }
-  .mock-bar { display: flex; gap: 6px; padding: 10px 14px; }
-  .mock-bar span { width: 10px; height: 10px; border-radius: 50%; background: #3a3f4e; }
-  .mock-body { display: grid; grid-template-columns: 220px 1fr; gap: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); min-height: 320px; background: var(--bg-soft); }
-  .mock-side { border-right: 1px solid var(--border); padding: 14px; }
-  .mock-chat-item { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; margin-bottom: 6px; }
-  .mock-chat-item.active { background: rgba(108,92,231,0.15); }
-  .mock-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); flex-shrink: 0; }
-  .mock-line { height: 8px; border-radius: 6px; background: #2a2f3d; }
-  .mock-line.w60 { width: 60%; } .mock-line.w40 { width: 40%; margin-top: 6px; }
-  .mock-main { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
-  .bubble { max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 13px; color: var(--text-dim); }
-  .bubble.in { background: #22273a; align-self: flex-start; border-bottom-left-radius: 4px; }
-  .bubble.out { background: linear-gradient(135deg, var(--accent), #8b7bf0); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-  .typing { align-self: flex-start; font-size: 12px; color: var(--text-dim); display: flex; gap: 4px; align-items: center; }
-  .typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-dim); display: inline-block; animation: blink 1.2s infinite ease-in-out; }
-  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
-  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
-
-  section { padding: 88px 0; }
-  .section-head { text-align: center; max-width: 620px; margin: 0 auto 48px; }
-  .section-head .kicker { color: var(--accent-2); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
-  .section-head h2 { font-size: clamp(26px, 4vw, 38px); margin-top: 10px; letter-spacing: -0.01em; }
-  .section-head p { color: var(--text-dim); margin-top: 12px; }
-
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 26px; transition: border-color .2s ease, transform .2s ease;
-  }
-  .card:hover { border-color: #3c4258; transform: translateY(-3px); }
-  .card .icon {
-    width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    font-size: 20px; background: rgba(108,92,231,0.15); margin-bottom: 16px;
-  }
-  .card h3 { font-size: 16px; margin-bottom: 8px; }
-  .card p { color: var(--text-dim); font-size: 14px; }
-
-  .stack-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-  .pill {
-    padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-soft);
-    font-size: 14px; color: var(--text-dim); display: flex; align-items: center; gap: 8px;
-  }
-  .pill b { color: var(--text); font-weight: 600; }
-
-  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-  .list-check { list-style: none; display: flex; flex-direction: column; gap: 14px; }
-  .list-check li { display: flex; gap: 12px; color: var(--text-dim); font-size: 15px; }
-  .list-check li b { color: var(--text); }
-  .check {
-    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,210,164,0.15);
-    color: var(--accent-2); display: flex; align-items: center; justify-content: center; font-size: 13px; margin-top: 1px;
+  .ctrl-btn:hover { background: rgba(255,255,255,0.08); }
+  .ctrl-btn.toggle { color: var(--text-dim); }
+  .ctrl-btn.toggle.on { color: var(--accent); }
+  .play-btn {
+    width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1a1a1a;
+    font-size: 22px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 14px 30px -10px rgba(255,77,109,0.6);
   }
 
-  .cta-section {
-    text-align: center; border-radius: 24px; border: 1px solid var(--border);
-    background: linear-gradient(135deg, rgba(108,92,231,0.18), rgba(0,210,164,0.1));
-    padding: 64px 32px;
+  .vol-row { display: flex; align-items: center; gap: 10px; margin-top: 26px; width: 100%; max-width: 220px; color: var(--text-dim); }
+  input[type="range"] {
+    -webkit-appearance: none; flex: 1; height: 5px; border-radius: 999px; background: var(--border); outline: none;
   }
-  .cta-section h2 { font-size: clamp(24px, 4vw, 34px); margin-bottom: 14px; }
-  .cta-section p { color: var(--text-dim); max-width: 480px; margin: 0 auto 28px; }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer;
+  }
 
-  footer { border-top: 1px solid var(--border); padding: 32px 0; color: var(--text-dim); font-size: 13px; }
-  .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-
-  @media (max-width: 860px) {
-    nav.links { display: none; }
-    .grid { grid-template-columns: 1fr; }
-    .cols-2 { grid-template-columns: 1fr; }
-    .mock-body { grid-template-columns: 1fr; }
-    .mock-side { display: none; }
+  @media (max-width: 680px) {
+    .app { grid-template-columns: 1fr; }
+    .side { border-right: none; border-bottom: 1px solid var(--border); min-height: 220px; }
   }
 </style>
 </head>
 <body>
 
-<header class="nav">
-  <div class="wrap nav-inner">
-    <div class="logo"><span class="logo-dot">💬</span> Messenger</div>
-    <nav class="links">
-      <a href="#features">Возможности</a>
-      <a href="#stack">Технологии</a>
-      <a href="#start">Запуск</a>
-    </nav>
-    <a class="btn btn-primary" href="https://github.com" target="_blank" rel="noopener">Открыть на GitHub</a>
-  </div>
-</header>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="dot">🎵</span> Плейлист</div>
+    <div class="add-row">
+      <button class="add-btn" id="addFileBtn">+ Добавить свой трек</button>
+    </div>
+    <input type="file" id="fileInput" accept="audio/*" multiple style="display:none" />
+    <div class="playlist" id="playlist"></div>
+  </aside>
 
-<main>
-  <section class="hero">
-    <div class="wrap">
-      <span class="eyebrow"><span class="dot"></span> Чаты в реальном времени на Socket.io</span>
-      <h1>Мессенджер, который<br><span>доставляет сообщения мгновенно</span></h1>
-      <p class="lead">Личные и групповые чаты, вложения, реакции, статусы прочтения и индикатор набора текста — всё поверх WebSocket, с историей в PostgreSQL.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="#start">Как запустить</a>
-        <a class="btn btn-ghost" href="#features">Все возможности</a>
-      </div>
+  <section class="main">
+    <div class="art-wrap" id="artWrap">🎧</div>
+    <div class="now-title" id="nowTitle">—</div>
+    <div class="now-artist" id="nowArtist">—</div>
 
-      <div class="mock">
-        <div class="mock-bar"><span></span><span></span><span></span></div>
-        <div class="mock-body">
-          <div class="mock-side">
-            <div class="mock-chat-item active">
-              <div class="mock-avatar"></div>
-              <div style="flex:1"><div class="mock-line w60"></div><div class="mock-line w40"></div></div>
-            </div>
-            <div class="mock-chat-item">
-              <div class="mock-avatar" style="background:#2a2f3d"></div>
-              <div style="flex:1"><div class="mock-line w60" style="background:#232838"></div><div class="mock-line w40" style="background:#232838"></div></div>
-            </div>
-            <div class="mock-chat-item">
-              <div class="mock-avatar" style="background:#2a2f3d"></div>
-              <div style="flex:1"><div class="mock-line w60" style="background:#232838"></div><div class="mock-line w40" style="background:#232838"></div></div>
-            </div>
-          </div>
-          <div class="mock-main">
-            <div class="bubble in">Привет! Видел обновление с реакциями? 👀</div>
-            <div class="bubble out">Да, уже тестирую 😄 ещё групповые чаты добавили</div>
-            <div class="bubble in">Статусы прочтения тоже работают, кстати</div>
-            <div class="typing">печатает<i></i><i></i><i></i></div>
-          </div>
-        </div>
-      </div>
+    <div class="progress-wrap">
+      <div class="bar" id="bar"><div class="bar-fill" id="barFill"></div></div>
+      <div class="time-row"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn toggle" id="shuffleBtn" title="Перемешать">🔀</button>
+      <button class="ctrl-btn" id="prevBtn" title="Предыдущий">⏮</button>
+      <button class="play-btn" id="playBtn" title="Play/Pause">▶</button>
+      <button class="ctrl-btn" id="nextBtn" title="Следующий">⏭</button>
+      <button class="ctrl-btn toggle" id="repeatBtn" title="Повтор">🔁</button>
+    </div>
+
+    <div class="vol-row">
+      <span>🔈</span>
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" />
     </div>
   </section>
+</div>
 
-  <section id="features">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="kicker">Возможности</span>
-        <h2>Всё, что нужно для общения</h2>
-        <p>От приватных диалогов до групповых чатов с вложениями и реакциями.</p>
-      </div>
-      <div class="grid">
-        <div class="card"><div class="icon">🔐</div><h3>JWT-аутентификация</h3><p>Access-токен в памяти, refresh — в httpOnly cookie, с автоматическим обновлением.</p></div>
-        <div class="card"><div class="icon">⚡</div><h3>Реальное время</h3><p>Доставка сообщений через Socket.io без перезагрузки страницы.</p></div>
-        <div class="card"><div class="icon">👥</div><h3>Группы</h3><p>Создание групповых чатов, управление участниками, выход из группы.</p></div>
-        <div class="card"><div class="icon">📎</div><h3>Вложения</h3><p>До 5 файлов и 15 МБ каждый, с превью изображений прямо в чате.</p></div>
-        <div class="card"><div class="icon">😊</div><h3>Реакции</h3><p>Эмодзи-реакции на сообщения с подсчётом и переключением по клику.</p></div>
-        <div class="card"><div class="icon">✓✓</div><h3>Статусы и индикаторы</h3><p>Прочитано / не прочитано, «печатает…», онлайн-статус в реальном времени.</p></div>
-      </div>
-    </div>
-  </section>
+<audio id="audio" preload="metadata"></audio>
 
-  <section id="stack">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="kicker">Технологии</span>
-        <h2>Современный full-stack</h2>
-      </div>
-      <div class="stack-row">
-        <span class="pill"><b>Backend:</b> Node.js · TypeScript · Express</span>
-        <span class="pill"><b>Real-time:</b> Socket.io</span>
-        <span class="pill"><b>БД:</b> PostgreSQL · Prisma ORM</span>
-        <span class="pill"><b>Frontend:</b> React · Vite · Tailwind CSS</span>
-        <span class="pill"><b>Состояние:</b> Zustand · Axios</span>
-      </div>
-    </div>
-  </section>
+<script>
+(function () {
+  "use strict";
 
-  <section id="start">
-    <div class="wrap cols-2">
-      <div>
-        <span class="kicker">Быстрый старт</span>
-        <h2 style="margin-top:10px; font-size:clamp(24px,4vw,32px);">Запуск за 5 минут</h2>
-        <ul class="list-check" style="margin-top:22px;">
-          <li><span class="check">1</span><span><b>База данных:</b> поднимите PostgreSQL и создайте пользователя/БД.</span></li>
-          <li><span class="check">2</span><span><b>Backend:</b> <code>cd server && npm install && npm run prisma:migrate && npm run dev</code></span></li>
-          <li><span class="check">3</span><span><b>Frontend:</b> <code>cd client && npm install && npm run dev</code></span></li>
-          <li><span class="check">4</span><span>Откройте <b>localhost:5173</b>, зарегистрируйте пользователей и начните чат.</span></li>
-        </ul>
-      </div>
-      <div class="mock" style="margin:0;">
-        <div class="mock-bar"><span></span><span></span><span></span></div>
-        <div style="padding:20px; font-family: monospace; font-size:13px; color:var(--text-dim); line-height:1.8;">
-          <div style="color:var(--accent-2);">$ cd server</div>
-          <div>$ npm install</div>
-          <div>$ npm run prisma:migrate</div>
-          <div style="color:var(--accent-2);">$ npm run dev</div>
-          <div style="color:#6c7a89;">→ http://localhost:4000</div>
-          <br>
-          <div style="color:var(--accent-2);">$ cd client</div>
-          <div>$ npm install</div>
-          <div style="color:var(--accent-2);">$ npm run dev</div>
-          <div style="color:#6c7a89;">→ http://localhost:5173</div>
-        </div>
-      </div>
-    </div>
-  </section>
+  // Демо-треки генерируются на лету через Web Audio API (реальный звук, без внешних mp3-файлов).
+  // Чтобы подключить свои треки — замени генератор на src: 'моя-песня.mp3' и используй обычный <audio>.
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  let demoBuffersCache = {};
 
-  <section>
-    <div class="wrap">
-      <div class="cta-section">
-        <h2>Готовы попробовать?</h2>
-        <p>Клонируйте репозиторий, поднимите backend и frontend — и начните общение за пару минут.</p>
-        <a class="btn btn-primary" href="https://github.com" target="_blank" rel="noopener">Посмотреть исходный код</a>
-      </div>
-    </div>
-  </section>
-</main>
+  function buildDemoBuffer(freqs, seconds) {
+    const sr = ctx.sampleRate;
+    const length = sr * seconds;
+    const buffer = ctx.createBuffer(2, length, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      for (let i = 0; i < length; i++) {
+        const t = i / sr;
+        let sample = 0;
+        freqs.forEach((f, idx) => {
+          sample += Math.sin(2 * Math.PI * f * t) * (0.18 / (idx + 1));
+        });
+        const envelope = Math.min(1, t * 6) * Math.min(1, (seconds - t) * 6);
+        data[i] = sample * envelope;
+      }
+    }
+    return buffer;
+  }
 
-<footer>
-  <div class="wrap footer-inner">
-    <span>© 2026 Messenger. Учебный проект.</span>
-    <span>Node.js · React · Socket.io · PostgreSQL</span>
-  </div>
-</footer>
+  const playlist = [
+    { title: "Demo Track — Sunrise", artist: "Генератор", emoji: "🌅", kind: "demo", freqs: [261.6, 329.6, 392.0], duration: 20 },
+    { title: "Demo Track — Nightdrive", artist: "Генератор", emoji: "🌙", kind: "demo", freqs: [220.0, 277.2, 329.6], duration: 20 },
+    { title: "Demo Track — Lofi Loop", artist: "Генератор", emoji: "☕", kind: "demo", freqs: [196.0, 246.9, 293.7], duration: 20 },
+  ];
+
+  let currentIndex = 0;
+  let isPlaying = false;
+  let shuffle = false;
+  let repeat = false;
+
+  let sourceNode = null;
+  let gainNode = ctx.createGain();
+  gainNode.connect(ctx.destination);
+  let startedAt = 0;
+  let offsetAt = 0;
+  let rafId = null;
+
+  const audioEl = document.getElementById("audio");
+  const playlistEl = document.getElementById("playlist");
+  const playBtn = document.getElementById("playBtn");
+  const prevBtn = document.getElementById("prevBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const shuffleBtn = document.getElementById("shuffleBtn");
+  const repeatBtn = document.getElementById("repeatBtn");
+  const bar = document.getElementById("bar");
+  const barFill = document.getElementById("barFill");
+  const curTimeEl = document.getElementById("curTime");
+  const durTimeEl = document.getElementById("durTime");
+  const nowTitle = document.getElementById("nowTitle");
+  const nowArtist = document.getElementById("nowArtist");
+  const artWrap = document.getElementById("artWrap");
+  const volume = document.getElementById("volume");
+  const addFileBtn = document.getElementById("addFileBtn");
+  const fileInput = document.getElementById("fileInput");
+
+  function fmtTime(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return m + ":" + String(sec).padStart(2, "0");
+  }
+
+  function renderPlaylist() {
+    playlistEl.innerHTML = "";
+    playlist.forEach((track, i) => {
+      const el = document.createElement("div");
+      el.className = "track" + (i === currentIndex ? " active" : "");
+      el.innerHTML =
+        '<div class="track-art">' + track.emoji + "</div>" +
+        '<div class="track-meta">' +
+          '<div class="track-title">' + track.title + "</div>" +
+          '<div class="track-artist">' + track.artist + "</div>" +
+        "</div>" +
+        (i === currentIndex && isPlaying
+          ? '<div class="track-eq"><span></span><span></span><span></span></div>'
+          : '<div class="track-dur">' + fmtTime(track.duration || 0) + "</div>");
+      el.addEventListener("click", () => loadTrack(i, true));
+      playlistEl.appendChild(el);
+    });
+  }
+
+  function stopSource() {
+    if (sourceNode) {
+      try { sourceNode.stop(); } catch (e) {}
+      sourceNode.disconnect();
+      sourceNode = null;
+    }
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function loadTrack(index, autoplay) {
+    stopSource();
+    audioEl.pause();
+    audioEl.removeAttribute("src");
+    currentIndex = (index + playlist.length) % playlist.length;
+    const track = playlist[currentIndex];
+    nowTitle.textContent = track.title;
+    nowArtist.textContent = track.artist;
+    artWrap.textContent = track.emoji;
+    offsetAt = 0;
+    barFill.style.width = "0%";
+    curTimeEl.textContent = "0:00";
+    durTimeEl.textContent = fmtTime(track.duration || audioEl.duration || 0);
+    renderPlaylist();
+    if (autoplay) play();
+  }
+
+  function getDemoBuffer(track) {
+    const key = track.title;
+    if (!demoBuffersCache[key]) {
+      demoBuffersCache[key] = buildDemoBuffer(track.freqs, track.duration);
+    }
+    return demoBuffersCache[key];
+  }
+
+  function tick() {
+    const track = playlist[currentIndex];
+    let current, total;
+    if (track.kind === "demo") {
+      current = ctx.currentTime - startedAt + offsetAt;
+      total = track.duration;
+      if (current >= total) {
+        onTrackEnded();
+        return;
+      }
+    } else {
+      current = audioEl.currentTime;
+      total = audioEl.duration || track.duration || 0;
+    }
+    barFill.style.width = Math.min(100, (current / total) * 100) + "%";
+    curTimeEl.textContent = fmtTime(current);
+    durTimeEl.textContent = fmtTime(total);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function onTrackEnded() {
+    if (repeat) {
+      offsetAt = 0;
+      play();
+    } else {
+      nextTrack();
+    }
+  }
+
+  function play() {
+    const track = playlist[currentIndex];
+    if (track.kind === "demo") {
+      if (ctx.state === "suspended") ctx.resume();
+      stopSource();
+      const buffer = getDemoBuffer(track);
+      sourceNode = ctx.createBufferSource();
+      sourceNode.buffer = buffer;
+      sourceNode.connect(gainNode);
+      sourceNode.start(0, offsetAt);
+      startedAt = ctx.currentTime;
+      sourceNode.onended = () => {
+        if (isPlaying && ctx.currentTime - startedAt + offsetAt >= track.duration - 0.05) {
+          onTrackEnded();
+        }
+      };
+    } else {
+      audioEl.play();
+    }
+    isPlaying = true;
+    playBtn.textContent = "⏸";
+    renderPlaylist();
+    if (rafId) cancelAnimationFrame(rafId);
+    tick();
+  }
+
+  function pause() {
+    const track = playlist[currentIndex];
+    if (track.kind === "demo") {
+      offsetAt = offsetAt + (ctx.currentTime - startedAt);
+      stopSource();
+    } else {
+      audioEl.pause();
+    }
+    isPlaying = false;
+    playBtn.textContent = "▶";
+    renderPlaylist();
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function togglePlay() {
+    isPlaying ? pause() : play();
+  }
+
+  function nextTrack() {
+    let idx;
+    if (shuffle) {
+      idx = Math.floor(Math.random() * playlist.length);
+    } else {
+      idx = currentIndex + 1;
+    }
+    loadTrack(idx, true);
+  }
+
+  function prevTrack() {
+    loadTrack(currentIndex - 1, true);
+  }
+
+  bar.addEventListener("click", (e) => {
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const track = playlist[currentIndex];
+    const total = track.kind === "demo" ? track.duration : (audioEl.duration || track.duration || 0);
+    const newTime = ratio * total;
+    if (track.kind === "demo") {
+      offsetAt = newTime;
+      if (isPlaying) play(); else { barFill.style.width = ratio * 100 + "%"; curTimeEl.textContent = fmtTime(newTime); }
+    } else {
+      audioEl.currentTime = newTime;
+    }
+  });
+
+  playBtn.addEventListener("click", togglePlay);
+  nextBtn.addEventListener("click", nextTrack);
+  prevBtn.addEventListener("click", prevTrack);
+  shuffleBtn.addEventListener("click", () => { shuffle = !shuffle; shuffleBtn.classList.toggle("on", shuffle); });
+  repeatBtn.addEventListener("click", () => { repeat = !repeat; repeatBtn.classList.toggle("on", repeat); });
+  volume.addEventListener("input", () => {
+    gainNode.gain.value = parseFloat(volume.value);
+    audioEl.volume = parseFloat(volume.value);
+  });
+  gainNode.gain.value = parseFloat(volume.value);
+  audioEl.volume = parseFloat(volume.value);
+
+  audioEl.addEventListener("loadedmetadata", () => {
+    durTimeEl.textContent = fmtTime(audioEl.duration);
+  });
+  audioEl.addEventListener("timeupdate", () => {
+    const track = playlist[currentIndex];
+    if (track.kind !== "demo") {
+      const total = audioEl.duration || 0;
+      barFill.style.width = total ? (audioEl.currentTime / total) * 100 + "%" : "0%";
+      curTimeEl.textContent = fmtTime(audioEl.currentTime);
+    }
+  });
+  audioEl.addEventListener("ended", onTrackEnded);
+
+  addFileBtn.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const url = URL.createObjectURL(file);
+      playlist.push({
+        title: file.name.replace(/\.[^.]+$/, ""),
+        artist: "Загруженный файл",
+        emoji: "🎶",
+        kind: "file",
+        src: url,
+      });
+    });
+    renderPlaylist();
+  });
+
+  // Переопределяем loadTrack для файлов пользователя (src вместо генератора).
+  const originalLoadTrack = loadTrack;
+  function loadTrackPatched(index, autoplay) {
+    const idx = (index + playlist.length) % playlist.length;
+    const track = playlist[idx];
+    if (track.kind === "file") {
+      stopSource();
+      currentIndex = idx;
+      nowTitle.textContent = track.title;
+      nowArtist.textContent = track.artist;
+      artWrap.textContent = track.emoji;
+      audioEl.src = track.src;
+      offsetAt = 0;
+      barFill.style.width = "0%";
+      curTimeEl.textContent = "0:00";
+      renderPlaylist();
+      if (autoplay) {
+        audioEl.play();
+        isPlaying = true;
+        playBtn.textContent = "⏸";
+        renderPlaylist();
+      }
+    } else {
+      originalLoadTrack(index, autoplay);
+    }
+  }
+  loadTrack = loadTrackPatched;
+
+  renderPlaylist();
+  loadTrack(0, false);
+})();
+</script>
 
 </body>
 </html>
